@@ -38,6 +38,7 @@ export class MacroEngine {
     musicCloud: string = "";
     musicOnlineHint: string = "";
     currentSchedule: string = "";
+    emotionInjection: string = "";
     vnScenes: string = "";
     vnSprites: string = "";
     vnBeats: string = "";
@@ -170,6 +171,7 @@ export class MacroEngine {
         if (body === "musicCloud") return this.musicCloud || "无";
         if (body === "musicOnlineHint") return this.musicOnlineHint;
         if (body === "currentSchedule" || body === "当前日程") return this.currentSchedule || "无";
+        if (body === "emotionInjection" || body === "当前情绪") return this.emotionInjection || "无";
         if (body === "vnScenes") return this.vnScenes || "暂无";
         if (body === "vnSprites") return this.vnSprites || "暂无";
         if (body === "vnBeats") return this.vnBeats || "\x00TRIM\x00";

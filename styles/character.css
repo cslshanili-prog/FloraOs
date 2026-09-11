@@ -650,6 +650,155 @@
   border-color: var(--c-text-title);
 }
 
+/* --- 情绪 Buff 标签：header 下方 + 日程/情绪弹窗共用 --- */
+.emotion-buff-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-weight: 700;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  padding: 3px 9px;
+  font-size: calc(11.7px*var(--app-text-scale,1));
+  line-height: 1.3;
+  white-space: nowrap;
+  cursor: default;
+}
+
+button.emotion-buff-pill {
+  font-family: inherit;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+button.emotion-buff-pill:active {
+  transform: scale(0.94);
+}
+
+.emotion-buff-pill-sm {
+  font-size: calc(10.4px*var(--app-text-scale,1));
+  padding: 1px 7px;
+}
+
+.chat-header-emotion-tags {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  overflow-x: auto;
+  max-width: 100%;
+  scrollbar-width: none;
+}
+
+.chat-header-emotion-tags::-webkit-scrollbar {
+  display: none;
+}
+
+.chat-header-emotion-popover {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 6px;
+  z-index: 40;
+  background: var(--c-card, #fff);
+  border: 1px solid var(--c-panel-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+  text-align: left;
+}
+
+.chat-header-emotion-popover-title {
+  font-size: calc(13px*var(--app-text-scale,1));
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.chat-header-emotion-popover-desc {
+  font-size: calc(12px*var(--app-text-scale,1));
+  color: var(--c-icon);
+  line-height: 1.5;
+}
+
+/* --- 日程/情绪 弹窗 --- */
+.schedule-emotion-modal {
+  max-height: 78vh;
+  overflow-y: auto;
+  gap: 14px;
+}
+
+.schedule-emotion-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--c-icon-active) 5%, transparent);
+}
+
+.schedule-emotion-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.schedule-emotion-mini-btn {
+  padding: 5px 10px !important;
+  font-size: calc(11.7px*var(--app-text-scale,1)) !important;
+  width: auto !important;
+}
+
+.schedule-emotion-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.schedule-emotion-timeline-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--c-panel-border);
+}
+
+.schedule-emotion-timeline-row:last-child {
+  border-bottom: none;
+}
+
+.schedule-emotion-timeline-row.is-now {
+  color: var(--c-icon-active);
+  font-weight: 700;
+}
+
+.schedule-emotion-timeline-row.is-past {
+  opacity: 0.5;
+}
+
+.schedule-emotion-timeline-time {
+  flex-shrink: 0;
+  font-family: ui-monospace, "SF Mono", "Cascadia Code", monospace;
+  font-size: calc(12px*var(--app-text-scale,1));
+  min-width: 40px;
+}
+
+.schedule-emotion-timeline-body {
+  font-size: calc(13px*var(--app-text-scale,1));
+  color: var(--c-text);
+}
+
+.schedule-emotion-timeline-location {
+  color: var(--c-icon);
+}
+
+.schedule-emotion-buffs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .char-timezone-picker {
   display: flex;
   flex-direction: column;
