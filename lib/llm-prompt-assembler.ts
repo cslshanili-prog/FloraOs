@@ -62,6 +62,7 @@ export interface AssemblerInput {
     periodCareContext?: string;
     scheduleSummary?: string;
     currentSchedule?: string;
+    emotionInjection?: string;
     longTermMemories?: string;
     coreMemories?: string;
     worldBookActivationContext?: string;  // override history-based keyword activation context
@@ -670,6 +671,7 @@ export function assemblePromptPayload(input: AssemblerInput): LLMMessage[] {
         engine.musicCloud = input.musicCloud ?? "";
         engine.musicOnlineHint = input.musicOnlineHint ?? "";
         engine.currentSchedule = input.currentSchedule ?? "";
+        engine.emotionInjection = input.emotionInjection ?? "";
         engine.vnScenes = input.vnScenes ?? "";
         engine.vnSprites = input.vnSprites ?? "";
         engine.vnBeats = input.vnBeats ?? "";

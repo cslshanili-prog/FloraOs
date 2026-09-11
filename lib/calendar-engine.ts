@@ -64,7 +64,7 @@ function buildCalendarTriggerInstruction(ownerName: string, weekDates: string[])
     `请为${ownerName}生成 ${weekDates[0]} 到 ${weekDates[6]} 这一周的日程安排。`,
     "请参考已有日程，生成这一周的完整日程安排。",
     "每行一条，格式：YYYY-MM-DD|周几|开始时间|结束时间|地点|emoji|事项。emoji 段填一个最贴合该事项的表情符号。",
-    "作息时间不受限制（早起、夜跑、通宵都可以安排），但每一天最多 5 条日程，宁缺毋滥。",
+    "作息时间不受限制（早起、夜跑、通宵都可以安排），每一天大约安排 4~8 条日程，尽量覆盖从早到晚整个 24 小时（起床、上午、下午、傍晚、夜间都留一两条），不要全挤在某几个小时里。",
   ].join("\n");
 }
 
