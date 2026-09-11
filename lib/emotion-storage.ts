@@ -1,4 +1,5 @@
-import type { CharacterEmotionState, EmotionBuff } from "./emotion-types";
+import type { CharacterEmotionState, EmotionBuff, EmotionVisibility } from "./emotion-types";
+import { DEFAULT_EMOTION_VISIBILITY } from "./emotion-types";
 import { kvGet, kvSet, registerKvMigration } from "./kv-db";
 
 const STORAGE_KEY = "ai_phone_emotion_v1";
@@ -50,15 +51,37 @@ export function clearCharacterEmotionBuffs(characterId: string): CharacterEmotio
   const store = loadStore();
   const existing = store.states[characterId];
   if (!existing) return null;
-  const next: CharacterEmotionState = { ...existing, buffs: [], injection: "", updatedAt: new Date().toISOString() };
+  const next: CharacterEmotionState = {
+    ...existing,
+    buffs: [],
+    injection: "",
+    stateValues: undefined,
+    coreThought: undefined,
+    darkSide: undefined,
+    snark: undefined,
+    withdrawnDraft: undefined,
+    nextAction: undefined,
+    updatedAt: new Date().toISOString(),
+  };
   store.states[characterId] = next;
   saveStore(store);
   return next;
 }
 
+export type EmotionEvalApplyPayload = {
+  buffs: EmotionBuff[];
+  injection: string;
+  stateValues?: CharacterEmotionState["stateValues"];
+  coreThought?: string;
+  darkSide?: string;
+  snark?: string;
+  withdrawnDraft?: string;
+  nextAction?: string;
+};
+
 export function applyCharacterEmotionResult(
   characterId: string,
-  result: { buffs: EmotionBuff[]; injection: string },
+  result: EmotionEvalApplyPayload,
 ): CharacterEmotionState {
   const store = loadStore();
   const existing = store.states[characterId];
@@ -67,8 +90,38 @@ export function applyCharacterEmotionResult(
     enabled: existing?.enabled ?? true,
     buffs: result.buffs,
     injection: result.injection,
+    stateValues: result.stateValues,
+    coreThought: result.coreThought,
+    darkSide: result.darkSide,
+    snark: result.snark,
+    withdrawnDraft: result.withdrawnDraft,
+    nextAction: result.nextAction,
+    visibility: existing?.visibility,
     updatedAt: new Date().toISOString(),
   };
+  store.states[characterId] = next;
+  saveStore(store);
+  return next;
+}
+
+export function getEmotionVisibility(characterId: string): EmotionVisibility {
+  const state = loadCharacterEmotionState(characterId);
+  if (!state?.visibility) return DEFAULT_EMOTION_VISIBILITY;
+  return {
+    stateValues: { ...DEFAULT_EMOTION_VISIBILITY.stateValues, ...state.visibility.stateValues },
+    darkSide: state.visibility.darkSide ?? true,
+    snark: state.visibility.snark ?? true,
+    withdrawnDraft: state.visibility.withdrawnDraft ?? true,
+    nextAction: state.visibility.nextAction ?? true,
+  };
+}
+
+export function setEmotionVisibility(characterId: string, visibility: EmotionVisibility): CharacterEmotionState {
+  const store = loadStore();
+  const existing = store.states[characterId];
+  const next: CharacterEmotionState = existing
+    ? { ...existing, visibility }
+    : { characterId, enabled: true, buffs: [], injection: "", visibility, updatedAt: new Date().toISOString() };
   store.states[characterId] = next;
   saveStore(store);
   return next;

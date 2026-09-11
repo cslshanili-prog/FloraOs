@@ -5,18 +5,32 @@ import type { CalendarScheduleItem } from "@/lib/calendar-types";
 import { loadCalendarWeekPlan } from "@/lib/calendar-storage";
 import { generateWeeklyCalendarSchedule } from "@/lib/calendar-engine";
 import { getWeekStartIso, formatIsoDate, getWeekdayLabel, timeToMinutes } from "@/lib/calendar-utils";
-import { loadCharacterEmotionState, setCharacterEmotionEnabled, clearCharacterEmotionBuffs } from "@/lib/emotion-storage";
-import type { CharacterEmotionState } from "@/lib/emotion-types";
+import {
+    loadCharacterEmotionState,
+    setCharacterEmotionEnabled,
+    clearCharacterEmotionBuffs,
+    getEmotionVisibility,
+    setEmotionVisibility,
+} from "@/lib/emotion-storage";
+import type { CharacterEmotionState, EmotionNarrativeKey, EmotionVisibility } from "@/lib/emotion-types";
+import { EMOTION_STATE_VALUE_KEYS, EMOTION_NARRATIVE_LABELS } from "@/lib/emotion-types";
 import { isScheduleUiEnabled, setScheduleUiEnabled } from "@/lib/schedule-ui-storage";
 import { loadBindingConfig, resolveBinding } from "@/lib/settings-storage";
 import { Toggle } from "@/components/ui/form";
-import { hashColor, buffPillStyle } from "./state-values-panel";
+import { hashColor, buffPillStyle, getStateColor } from "./state-values-panel";
 
 type ScheduleEmotionModalProps = {
     characterId: string;
     characterName: string;
     characterAvatar?: string | null;
     onClose: () => void;
+};
+
+const NARRATIVE_ICONS: Record<EmotionNarrativeKey, string> = {
+    darkSide: "🌑",
+    snark: "🚩",
+    withdrawnDraft: "📝",
+    nextAction: "✅",
 };
 
 export function ScheduleEmotionModal({ characterId, characterName, characterAvatar, onClose }: ScheduleEmotionModalProps) {
@@ -41,6 +55,8 @@ export function ScheduleEmotionModal({ characterId, characterName, characterAvat
 
     const [emotionState, setEmotionState] = useState<CharacterEmotionState | null>(null);
     const [emotionBound, setEmotionBound] = useState(true);
+    const [visibility, setVisibility] = useState<EmotionVisibility>(() => getEmotionVisibility(characterId));
+    const [showVisibilitySettings, setShowVisibilitySettings] = useState(false);
 
     const refreshSchedule = () => {
         const plan = loadCalendarWeekPlan("character", characterId, weekStart);
@@ -50,6 +66,7 @@ export function ScheduleEmotionModal({ characterId, characterName, characterAvat
 
     const refreshEmotion = () => {
         setEmotionState(loadCharacterEmotionState(characterId));
+        setVisibility(getEmotionVisibility(characterId));
         const slot = resolveBinding(loadBindingConfig(), characterId, "emotion");
         setEmotionBound(!!slot.apiConfigId);
     };
@@ -69,6 +86,13 @@ export function ScheduleEmotionModal({ characterId, characterName, characterAvat
         return () => window.removeEventListener("emotion-updated", handler);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [characterId]);
+
+    useEffect(() => {
+        if (!showVisibilitySettings) return;
+        const closeOnOutsideClick = () => setShowVisibilitySettings(false);
+        window.addEventListener("click", closeOnOutsideClick);
+        return () => window.removeEventListener("click", closeOnOutsideClick);
+    }, [showVisibilitySettings]);
 
     const handleGenerate = async () => {
         setGenerating(true);
@@ -95,8 +119,30 @@ export function ScheduleEmotionModal({ characterId, characterName, characterAvat
         setEmotionState(clearCharacterEmotionBuffs(characterId));
     };
 
+    const handleToggleStateValueVisibility = (key: (typeof EMOTION_STATE_VALUE_KEYS)[number]) => {
+        const next: EmotionVisibility = { ...visibility, stateValues: { ...visibility.stateValues, [key]: !visibility.stateValues[key] } };
+        setVisibility(next);
+        setEmotionVisibility(characterId, next);
+    };
+
+    const handleToggleNarrativeVisibility = (key: EmotionNarrativeKey) => {
+        const next: EmotionVisibility = { ...visibility, [key]: !visibility[key] };
+        setVisibility(next);
+        setEmotionVisibility(characterId, next);
+    };
+
     const buffs = emotionState?.buffs ?? [];
     const enabled = emotionState?.enabled ?? false;
+
+    const visibleStateValues = EMOTION_STATE_VALUE_KEYS
+        .filter(key => visibility.stateValues[key] && emotionState?.stateValues?.[key] !== undefined)
+        .map(key => ({ key, value: emotionState!.stateValues![key]! }));
+
+    const narrativeBlocks = (Object.keys(EMOTION_NARRATIVE_LABELS) as EmotionNarrativeKey[])
+        .filter(key => visibility[key] && emotionState?.[key])
+        .map(key => ({ key, label: EMOTION_NARRATIVE_LABELS[key], icon: NARRATIVE_ICONS[key], value: emotionState![key]! }));
+
+    const hasMindContent = buffs.length > 0 || !!emotionState?.coreThought || visibleStateValues.length > 0 || narrativeBlocks.length > 0;
 
     return (
         <div className="modal-overlay" onClick={onClose}>
@@ -181,9 +227,38 @@ export function ScheduleEmotionModal({ characterId, characterName, characterAvat
                 </div>
 
                 <div className="schedule-emotion-section">
-                    <div className="schedule-emotion-section-head">
-                        <span className="ts-13 font-semibold text-[var(--c-text)]">情绪状态</span>
-                        <Toggle checked={enabled} onChange={handleToggleEmotion} />
+                    <div className="schedule-emotion-section-head" style={{ position: "relative" }}>
+                        <span className="ts-13 font-semibold text-[var(--c-text)]">情绪/心声</span>
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                className="schedule-emotion-gear-btn"
+                                onClick={(e) => { e.stopPropagation(); setShowVisibilitySettings(v => !v); }}
+                                aria-label="显示设置"
+                            >
+                                ⚙️
+                            </button>
+                            <Toggle checked={enabled} onChange={handleToggleEmotion} />
+                        </div>
+
+                        {showVisibilitySettings && (
+                            <div className="schedule-emotion-visibility-panel" onClick={e => e.stopPropagation()}>
+                                <div className="schedule-emotion-visibility-group-title">状态栏显示</div>
+                                {EMOTION_STATE_VALUE_KEYS.map(key => (
+                                    <div key={key} className="schedule-emotion-visibility-row">
+                                        <span>{key}</span>
+                                        <Toggle checked={visibility.stateValues[key]} onChange={() => handleToggleStateValueVisibility(key)} />
+                                    </div>
+                                ))}
+                                <div className="schedule-emotion-visibility-group-title">心声内容显示</div>
+                                {(Object.keys(EMOTION_NARRATIVE_LABELS) as EmotionNarrativeKey[]).map(key => (
+                                    <div key={key} className="schedule-emotion-visibility-row">
+                                        <span>{EMOTION_NARRATIVE_LABELS[key]}</span>
+                                        <Toggle checked={visibility[key]} onChange={() => handleToggleNarrativeVisibility(key)} />
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     {enabled && !emotionBound && (
@@ -193,20 +268,61 @@ export function ScheduleEmotionModal({ characterId, characterName, characterAvat
                     )}
 
                     {enabled && (
-                        buffs.length > 0 ? (
-                            <>
-                                <div className="schedule-emotion-buffs">
-                                    {buffs.map(buff => (
-                                        <span
-                                            key={buff.id}
-                                            className="emotion-buff-pill"
-                                            style={buffPillStyle(buff.color || hashColor(buff.label))}
-                                            title={buff.description || ""}
-                                        >
-                                            {buff.emoji ? `${buff.emoji} ` : ""}{buff.label}
-                                        </span>
-                                    ))}
-                                </div>
+                        hasMindContent ? (
+                            <div className="flex flex-col gap-2.5">
+                                {visibleStateValues.length > 0 && (
+                                    <div className="schedule-emotion-statebar">
+                                        {visibleStateValues.map(({ key, value }) => {
+                                            const color = getStateColor(key);
+                                            return (
+                                                <div key={key} className="schedule-emotion-statebar-row">
+                                                    <span className="schedule-emotion-statebar-label">{key}</span>
+                                                    <div className="state-bar-track">
+                                                        <div
+                                                            className="state-bar-fill"
+                                                            style={{
+                                                                width: `${value}%`,
+                                                                background: `linear-gradient(90deg, color-mix(in srgb, ${color} 40%, transparent), color-mix(in srgb, ${color} 80%, transparent))`,
+                                                            }}
+                                                            {...(value > 80 ? { "data-high": "" } : {})}
+                                                        />
+                                                    </div>
+                                                    <span className="schedule-emotion-statebar-value">{value}</span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+
+                                {buffs.length > 0 && (
+                                    <div className="schedule-emotion-buffs">
+                                        {buffs.map(buff => (
+                                            <span
+                                                key={buff.id}
+                                                className="emotion-buff-pill"
+                                                style={buffPillStyle(buff.color || hashColor(buff.label))}
+                                                title={buff.description || ""}
+                                            >
+                                                {buff.emoji ? `${buff.emoji} ` : ""}{buff.label}
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {emotionState?.coreThought && (
+                                    <div className="schedule-emotion-block">
+                                        <div className="schedule-emotion-block-title">💭 核心心声</div>
+                                        <div className="schedule-emotion-block-body">{emotionState.coreThought}</div>
+                                    </div>
+                                )}
+
+                                {narrativeBlocks.map(block => (
+                                    <div key={block.key} className={`schedule-emotion-block schedule-emotion-block--${block.key}`}>
+                                        <div className="schedule-emotion-block-title">{block.icon} {block.label}</div>
+                                        <div className="schedule-emotion-block-body">{block.value}</div>
+                                    </div>
+                                ))}
+
                                 <button
                                     type="button"
                                     className="ui-btn ui-btn-ghost ui-btn-bordered-ghost schedule-emotion-mini-btn"
@@ -214,10 +330,10 @@ export function ScheduleEmotionModal({ characterId, characterName, characterAvat
                                 >
                                     清除
                                 </button>
-                            </>
+                            </div>
                         ) : (
                             <div className="ts-12 text-[var(--c-icon)] text-center py-3">
-                                暂无情绪状态，发几条消息后会自动生成
+                                暂无情绪/心声内容，发几条消息后会自动生成
                             </div>
                         )
                     )}
