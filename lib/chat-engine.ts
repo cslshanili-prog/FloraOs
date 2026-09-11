@@ -72,6 +72,7 @@ import { getActiveAppTags } from "./content-tag-utils";
 import { isNeteaseConfigured, getUserPlaylists, getPlaylistTracks, checkLoginStatus, loadMusicApiConfig } from "./music-service";
 import { buildCalendarScheduleMarker, getCurrentCalendarScheduleForPrompt } from "./calendar-storage";
 import { getEmotionInjectionForPrompt } from "./emotion-storage";
+import { isScheduleUiEnabled } from "./schedule-ui-storage";
 import { getWeekStartIso } from "./calendar-utils";
 import { buildCharacterTimeContext } from "./character-time";
 import { getPromptTimestampOptionsForTimeContext } from "./prompt-time";
@@ -1871,7 +1872,7 @@ export async function buildChatPromptMessages(
     const longTermMemories = memResults ? formatLongTermMemories(memResults) : "";
     const coreMemories = coreResults ? formatCoreMemories(coreResults) : "";
     const scheduleSummary = buildCalendarScheduleMarker("character", character.id, getWeekStartIso(now));
-    const currentSchedule = getCurrentCalendarScheduleForPrompt("character", character.id, now);
+    const currentSchedule = isScheduleUiEnabled(character.id) ? getCurrentCalendarScheduleForPrompt("character", character.id, now) : "";
     const emotionInjection = getEmotionInjectionForPrompt(character.id);
     const musicOnlineHint = isNeteaseConfigured() ? "- 你可以推荐任何歌曲，系统会在线搜索并播放。不局限于用户本地音乐库。\n" : "\n";
     const pluginPrompt = await runChatPluginTransform("prompt.system", {

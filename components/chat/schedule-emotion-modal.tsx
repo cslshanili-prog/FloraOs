@@ -7,6 +7,7 @@ import { generateWeeklyCalendarSchedule } from "@/lib/calendar-engine";
 import { getWeekStartIso, formatIsoDate, getWeekdayLabel, timeToMinutes } from "@/lib/calendar-utils";
 import { loadCharacterEmotionState, setCharacterEmotionEnabled, clearCharacterEmotionBuffs } from "@/lib/emotion-storage";
 import type { CharacterEmotionState } from "@/lib/emotion-types";
+import { isScheduleUiEnabled, setScheduleUiEnabled } from "@/lib/schedule-ui-storage";
 import { loadBindingConfig, resolveBinding } from "@/lib/settings-storage";
 import { Toggle } from "@/components/ui/form";
 import { hashColor, buffPillStyle } from "./state-values-panel";
@@ -36,6 +37,7 @@ export function ScheduleEmotionModal({ characterId, characterName, characterAvat
     const [hasWeekPlan, setHasWeekPlan] = useState(false);
     const [generating, setGenerating] = useState(false);
     const [scheduleError, setScheduleError] = useState("");
+    const [scheduleEnabled, setScheduleEnabled] = useState(() => isScheduleUiEnabled(characterId));
 
     const [emotionState, setEmotionState] = useState<CharacterEmotionState | null>(null);
     const [emotionBound, setEmotionBound] = useState(true);
@@ -80,6 +82,11 @@ export function ScheduleEmotionModal({ characterId, characterName, characterAvat
         refreshSchedule();
     };
 
+    const handleToggleSchedule = (next: boolean) => {
+        setScheduleUiEnabled(characterId, next);
+        setScheduleEnabled(next);
+    };
+
     const handleToggleEmotion = (next: boolean) => {
         setEmotionState(setCharacterEmotionEnabled(characterId, next));
     };
@@ -96,64 +103,79 @@ export function ScheduleEmotionModal({ characterId, characterName, characterAvat
             <div onClick={e => e.stopPropagation()} className="modal-dialog schedule-emotion-modal">
                 <div className="ts-16 font-semibold text-center text-[var(--c-text)]">{characterName}的日程/情绪</div>
 
-                <div className="schedule-emotion-section schedule-emotion-section--schedule">
-                    <div className="schedule-emotion-banner">
-                        <div
-                            className="schedule-emotion-banner-bg"
-                            style={characterAvatar ? { backgroundImage: `url(${characterAvatar})` } : undefined}
-                        />
-                        <div className="schedule-emotion-banner-overlay" />
-                        <div className="schedule-emotion-banner-content">
-                            <div className="schedule-emotion-banner-top">
-                                <span className="schedule-emotion-banner-label">TODAY'S SCHEDULE</span>
-                                <button
-                                    type="button"
-                                    className="schedule-emotion-banner-btn"
-                                    disabled={generating}
-                                    onClick={handleGenerate}
-                                >
-                                    {generating ? "生成中…" : "🔄 重新生成"}
-                                </button>
-                            </div>
-                            <div className="schedule-emotion-banner-bottom">
-                                <span className="schedule-emotion-banner-clock">{clockLabel}</span>
-                                <span className="schedule-emotion-banner-date">{dateLabel}</span>
-                            </div>
-                        </div>
+                <div className="schedule-emotion-section">
+                    <div className="schedule-emotion-section-head">
+                        <span className="ts-13 font-semibold text-[var(--c-text)]">日程</span>
+                        <Toggle checked={scheduleEnabled} onChange={handleToggleSchedule} />
                     </div>
 
-                    {scheduleError && <div className="ts-12" style={{ color: "#e11d48" }}>{scheduleError}</div>}
-
-                    {todayItems.length > 0 ? (
-                        <div className="schedule-emotion-timeline">
-                            {todayItems.map(item => {
-                                const start = timeToMinutes(item.startTime);
-                                const end = timeToMinutes(item.endTime);
-                                const isNow = Number.isFinite(start) && Number.isFinite(end) && start <= nowMinutes && nowMinutes < end;
-                                const isPast = Number.isFinite(end) && nowMinutes >= end;
-                                return (
-                                    <div
-                                        key={item.id}
-                                        className={`schedule-emotion-timeline-row${isNow ? " is-now" : ""}${isPast ? " is-past" : ""}`}
-                                    >
-                                        <div className="schedule-emotion-timeline-time">
-                                            {item.startTime}
-                                            {isNow && <span className="schedule-emotion-now-badge">NOW</span>}
-                                        </div>
-                                        <div className="schedule-emotion-timeline-rail">
-                                            <span className="schedule-emotion-timeline-dot" />
-                                        </div>
-                                        <div className="schedule-emotion-timeline-body">
-                                            <span>{item.emoji ? `${item.emoji} ` : ""}{item.title}</span>
-                                            {item.location && <span className="schedule-emotion-timeline-location"> · {item.location}</span>}
-                                        </div>
+                    {scheduleEnabled ? (
+                        <div className="schedule-emotion-darkcard">
+                            <div className="schedule-emotion-banner">
+                                <div
+                                    className="schedule-emotion-banner-bg"
+                                    style={characterAvatar ? { backgroundImage: `url(${characterAvatar})` } : undefined}
+                                />
+                                <div className="schedule-emotion-banner-overlay" />
+                                <div className="schedule-emotion-banner-content">
+                                    <div className="schedule-emotion-banner-top">
+                                        <span className="schedule-emotion-banner-label">TODAY'S SCHEDULE</span>
+                                        <button
+                                            type="button"
+                                            className="schedule-emotion-banner-btn"
+                                            disabled={generating}
+                                            onClick={handleGenerate}
+                                        >
+                                            {generating ? "生成中…" : "🔄 重新生成"}
+                                        </button>
                                     </div>
-                                );
-                            })}
+                                    <div className="schedule-emotion-banner-bottom">
+                                        <span className="schedule-emotion-banner-clock">{clockLabel}</span>
+                                        <span className="schedule-emotion-banner-date">{dateLabel}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="schedule-emotion-timeline-wrap">
+                                {scheduleError && <div className="ts-12 schedule-emotion-error">{scheduleError}</div>}
+
+                                {todayItems.length > 0 ? (
+                                    <div className="schedule-emotion-timeline">
+                                        {todayItems.map(item => {
+                                            const start = timeToMinutes(item.startTime);
+                                            const end = timeToMinutes(item.endTime);
+                                            const isNow = Number.isFinite(start) && Number.isFinite(end) && start <= nowMinutes && nowMinutes < end;
+                                            const isPast = Number.isFinite(end) && nowMinutes >= end;
+                                            return (
+                                                <div
+                                                    key={item.id}
+                                                    className={`schedule-emotion-timeline-row${isNow ? " is-now" : ""}${isPast ? " is-past" : ""}`}
+                                                >
+                                                    <div className="schedule-emotion-timeline-time">
+                                                        {item.startTime}
+                                                        {isNow && <span className="schedule-emotion-now-badge">NOW</span>}
+                                                    </div>
+                                                    <div className="schedule-emotion-timeline-rail">
+                                                        <span className="schedule-emotion-timeline-dot" />
+                                                    </div>
+                                                    <div className="schedule-emotion-timeline-body">
+                                                        <span>{item.emoji ? `${item.emoji} ` : ""}{item.title}</span>
+                                                        {item.location && <span className="schedule-emotion-timeline-location"> · {item.location}</span>}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <div className="ts-12 schedule-emotion-empty text-center py-3">
+                                        {hasWeekPlan ? "今天没有安排" : "本周还没有日程，点一下上面生成"}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     ) : (
                         <div className="ts-12 text-[var(--c-icon)] text-center py-3">
-                            {hasWeekPlan ? "今天没有安排" : "本周还没有日程，点一下上面生成"}
+                            日程功能已关闭
                         </div>
                     )}
                 </div>

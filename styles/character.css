@@ -723,6 +723,8 @@ button.emotion-buff-pill:active {
 
 /* --- 日程/情绪 弹窗 --- */
 .schedule-emotion-modal {
+  width: 88%;
+  max-width: 325px;
   max-height: 78vh;
   overflow-y: auto;
   gap: 14px;
@@ -732,15 +734,6 @@ button.emotion-buff-pill:active {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--c-icon-active) 5%, transparent);
-}
-
-/* 日程区自带横幅已经够有分量，外层底色收掉，别跟横幅抢视觉 */
-.schedule-emotion-section--schedule {
-  background: transparent;
-  padding: 0 2px;
 }
 
 .schedule-emotion-section-head {
@@ -756,13 +749,17 @@ button.emotion-buff-pill:active {
   width: auto !important;
 }
 
-/* ── 日程横幅：把角色头像当封面，叠时钟+日期，视觉上跟纯文字列表拉开层次 ── */
+/* ── 日程深色卡片：封面横幅 + 时间轴共用一块底色，别切成两截 ── */
+.schedule-emotion-darkcard {
+  border-radius: 14px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #23233a 0%, #14141f 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
 .schedule-emotion-banner {
   position: relative;
   height: 104px;
-  border-radius: 14px;
-  overflow: hidden;
-  background: linear-gradient(135deg, color-mix(in srgb, var(--c-icon-active) 55%, #1a1a2e), #1a1a2e);
 }
 
 .schedule-emotion-banner-bg {
@@ -848,7 +845,20 @@ button.emotion-buff-pill:active {
   opacity: 0.85;
 }
 
-/* ── 时间轴：左侧时间 + 中间轴线圆点 + 右侧内容，取代纯文字列表 ── */
+/* ── 时间轴：跟横幅共用深色底，左侧时间 + 中间轴线圆点 + 右侧内容 ── */
+.schedule-emotion-timeline-wrap {
+  padding: 6px 12px 12px;
+}
+
+.schedule-emotion-error {
+  color: #ff8a97;
+  padding-bottom: 4px;
+}
+
+.schedule-emotion-empty {
+  color: rgba(255, 255, 255, 0.55);
+}
+
 .schedule-emotion-timeline {
   display: flex;
   flex-direction: column;
@@ -859,15 +869,16 @@ button.emotion-buff-pill:active {
   grid-template-columns: 44px 18px 1fr;
   column-gap: 8px;
   padding: 7px 0;
+  color: rgba(255, 255, 255, 0.92);
 }
 
 .schedule-emotion-timeline-row.is-now {
-  color: var(--c-icon-active);
+  color: var(--schedule-now-accent, #ffd166);
   font-weight: 700;
 }
 
 .schedule-emotion-timeline-row.is-past {
-  opacity: 0.5;
+  opacity: 0.4;
 }
 
 .schedule-emotion-timeline-time {
@@ -877,6 +888,7 @@ button.emotion-buff-pill:active {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  color: inherit;
 }
 
 .schedule-emotion-now-badge {
@@ -885,8 +897,8 @@ button.emotion-buff-pill:active {
   font-size: calc(8.5px*var(--app-text-scale,1));
   font-weight: 800;
   letter-spacing: 0.05em;
-  color: #fff;
-  background: var(--c-icon-active);
+  color: #1a1a2e;
+  background: var(--schedule-now-accent, #ffd166);
   border-radius: 4px;
   padding: 1px 4px;
   animation: scheduleNowPulse 1.6s ease-in-out infinite;
@@ -904,7 +916,7 @@ button.emotion-buff-pill:active {
   position: absolute;
   left: 50%;
   width: 2px;
-  background: var(--c-panel-border);
+  background: rgba(255, 255, 255, 0.18);
   transform: translateX(-50%);
 }
 
@@ -933,36 +945,39 @@ button.emotion-buff-pill:active {
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: var(--c-card, #fff);
-  border: 2px solid var(--c-panel-border);
+  background: rgba(255, 255, 255, 0.12);
+  border: 2px solid rgba(255, 255, 255, 0.35);
 }
 
 .schedule-emotion-timeline-row.is-now .schedule-emotion-timeline-dot {
-  background: var(--c-icon-active);
-  border-color: var(--c-icon-active);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--c-icon-active) 25%, transparent);
+  background: var(--schedule-now-accent, #ffd166);
+  border-color: var(--schedule-now-accent, #ffd166);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--schedule-now-accent, #ffd166) 30%, transparent);
   animation: scheduleDotPulse 1.6s ease-in-out infinite;
 }
 
 .schedule-emotion-timeline-row.is-past .schedule-emotion-timeline-dot {
-  background: var(--c-icon-active);
-  border-color: var(--c-icon-active);
-  opacity: 0.45;
+  background: rgba(255, 255, 255, 0.4);
+  border-color: rgba(255, 255, 255, 0.4);
 }
 
 .schedule-emotion-timeline-body {
   font-size: calc(13px*var(--app-text-scale,1));
-  color: var(--c-text);
+  color: inherit;
   padding-top: 1px;
 }
 
 .schedule-emotion-timeline-location {
-  color: var(--c-icon);
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.schedule-emotion-timeline-row.is-now .schedule-emotion-timeline-location {
+  color: color-mix(in srgb, var(--schedule-now-accent, #ffd166) 70%, white);
 }
 
 @keyframes scheduleDotPulse {
-  0%, 100% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--c-icon-active) 25%, transparent); }
-  50% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--c-icon-active) 12%, transparent); }
+  0%, 100% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--schedule-now-accent, #ffd166) 30%, transparent); }
+  50% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--schedule-now-accent, #ffd166) 14%, transparent); }
 }
 
 @keyframes scheduleNowPulse {
@@ -976,6 +991,7 @@ button.emotion-buff-pill:active {
     animation: none;
   }
 }
+
 
 
 .schedule-emotion-buffs {
