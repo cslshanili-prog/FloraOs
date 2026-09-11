@@ -15,6 +15,10 @@ import { EmojiPanel, StickerPanel } from "./emoji-panel";
 import { StickerSearchSuggest } from "./sticker-search-suggest";
 import { StateValuesPanel } from "./state-values-panel";
 import { generateChatCompletion, generateOfflineChatCompletion, flattenCompletionResult, ChatEngineError } from "@/lib/chat-engine";
+import { loadCharacterEmotionState } from "@/lib/emotion-storage";
+import { evaluateCharacterEmotion } from "@/lib/emotion-engine";
+import type { EmotionBuff } from "@/lib/emotion-types";
+import { hashColor, buffPillStyle } from "./state-values-panel";
 import { formatOfflineTurnXml as formatOfflineTurnXmlShared, buildOfflinePromptHistory as buildOfflinePromptHistoryShared } from "@/lib/offline-prompt-builder";
 import { getStatusRegionConfig, isCustomStatusRegionActive } from "@/lib/chat-status-region";
 import { CustomStatusFrame } from "@/components/chat/custom-status-frame";
@@ -41,6 +45,7 @@ import { VideoCallScreen } from "./video-call-screen";
 import { GroupCallScreen } from "./group-call-screen";
 import { TransferTargetModal } from "./transfer-target-modal";
 import { GiftPickerModal } from "./gift-picker-modal";
+import { ScheduleEmotionModal } from "./schedule-emotion-modal";
 import { ConfirmDialog } from "@/components/ui/modal";
 import { deleteWeixinCloudMessagesFromCloud, emitWeixinSyncToast, syncAllWeixinBotRuntimesToCloud } from "@/lib/weixin-cloud-sync";
 import { loadBindingConfig, loadPresets, loadRegexes, resolveBinding, resolveUserIdentity } from "@/lib/settings-storage";
@@ -52,7 +57,7 @@ import { useKeyboardDismissAutoSend } from "@/components/chat/use-keyboard-dismi
 import { cancelBailoutKey } from "@/lib/push-bailout-client";
 import { PENDING_REPLY_PREFIX } from "@/lib/friend-request-engine";
 import type { UserIdentity } from "@/components/settings/user-identity";
-import { AlertCircle, Blocks, Check, Trash2, User, ChevronLeft, ChevronRight, Clapperboard, Clock, Gift, Languages, Loader2, MoreHorizontal, X } from "lucide-react";
+import { AlertCircle, Blocks, Check, Trash2, User, ChevronLeft, ChevronRight, Clapperboard, Clock, Gift, Languages, Loader2, MoreHorizontal, Smile, X } from "lucide-react";
 import { setDebugChatState } from "@/lib/debug-store";
 import { SessionCustomCSS } from "@/components/ui/session-custom-css";
 import { setChatActive } from "@/lib/music-action-queue";
@@ -622,6 +627,7 @@ const ChatTextInputBar = memo(forwardRef<ChatTextInputHandle, {
     onCloseTheaterMode: () => void;
     onOpenRichModal: (modal: RichModalKind) => void;
     onOpenCustomPlusAction: (action: RegisteredCustomAppChatPlusAction) => void;
+    onOpenScheduleEmotion: () => void;
     onStartVideoCall: () => void;
     onStartVoiceCall: () => void;
     onSendText: (text: string, options?: { autoReply?: boolean }) => boolean;
@@ -653,6 +659,7 @@ const ChatTextInputBar = memo(forwardRef<ChatTextInputHandle, {
     onCloseTheaterMode,
     onOpenRichModal,
     onOpenCustomPlusAction,
+    onOpenScheduleEmotion,
     onStartVideoCall,
     onStartVoiceCall,
     onSendText,
@@ -727,6 +734,8 @@ const ChatTextInputBar = memo(forwardRef<ChatTextInputHandle, {
         { icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--c-text)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2" /><line x1="2" y1="10" x2="22" y2="10" /></svg>, label: "红包", onClick: () => onOpenRichModal("red_packet") },
         { icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--c-text)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><text x="12" y="16" textAnchor="middle" fontSize="12" fill="var(--c-text)" stroke="none">¥</text></svg>, label: "转账", onClick: () => onOpenRichModal(isGroup ? "transfer_target" : "transfer") },
         { icon: <Gift size={22} strokeWidth={1.5} color="var(--c-text)" />, label: "礼物", onClick: () => onOpenRichModal("gift") },
+        // 日程/情绪目前只做了单聊场景（角色维度），群聊先不接
+        ...(isGroup ? [] : [{ icon: <Smile size={22} strokeWidth={1.5} color="var(--c-text)" />, label: "日程/情绪", onClick: onOpenScheduleEmotion }]),
         { icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--c-text)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>, label: "位置", onClick: () => onOpenRichModal("location") },
         { icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--c-text)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" /><path d="M19 10v2a7 7 0 0 1-14 0v-2" /><line x1="12" y1="19" x2="12" y2="22" /><line x1="8" y1="22" x2="16" y2="22" /></svg>, label: "语音条", onClick: () => onOpenRichModal("voice_msg") },
         ...customPlusActions.map(action => ({
@@ -1086,6 +1095,27 @@ export function ChatRoom({ session, onBack, onDeleted }: ChatRoomProps) {
         const chars = loadCharacters();
         return chars.find(c => c.id === session.contactId) || null;
     });
+    // Header 情绪标签：最多显示 4 个，点一下弹出简要说明
+    const [emotionBuffs, setEmotionBuffs] = useState<EmotionBuff[]>(() => loadCharacterEmotionState(session.contactId)?.buffs ?? []);
+    const [openHeaderBuff, setOpenHeaderBuff] = useState<EmotionBuff | null>(null);
+    useEffect(() => {
+        setEmotionBuffs(loadCharacterEmotionState(session.contactId)?.buffs ?? []);
+        setOpenHeaderBuff(null);
+        const handler = (e: Event) => {
+            const detail = (e as CustomEvent<{ characterId?: string }>).detail;
+            if (!detail || detail.characterId === session.contactId) {
+                setEmotionBuffs(loadCharacterEmotionState(session.contactId)?.buffs ?? []);
+            }
+        };
+        window.addEventListener("emotion-updated", handler);
+        return () => window.removeEventListener("emotion-updated", handler);
+    }, [session.contactId]);
+    useEffect(() => {
+        if (!openHeaderBuff) return;
+        const closeOnOutsideClick = () => setOpenHeaderBuff(null);
+        window.addEventListener("click", closeOnOutsideClick);
+        return () => window.removeEventListener("click", closeOnOutsideClick);
+    }, [openHeaderBuff]);
     const [isGenerating, setIsGenerating] = useState(false);
     const [offlineMode, setOfflineMode] = useState(false);
     const [theaterMode, setTheaterMode] = useState(() => kvGet(CHAT_THEATER_MODE_PREFIX + session.id) === "1");
@@ -1130,6 +1160,7 @@ export function ChatRoom({ session, onBack, onDeleted }: ChatRoomProps) {
 
     // Rich media input modals
     const [richModal, setRichModal] = useState<RichModalKind | null>(null);
+    const [showScheduleEmotionModal, setShowScheduleEmotionModal] = useState(false);
     const [transferTarget, setTransferTarget] = useState<Character | null>(null);
     // Media detail modal (red packet / transfer detail view)
     const [mediaDetailMsg, setMediaDetailMsg] = useState<ChatMessage | null>(null);
@@ -3303,6 +3334,9 @@ export function ChatRoom({ session, onBack, onDeleted }: ChatRoomProps) {
                 scheduleFollowUp(session.id, 0, result.stateValues);
                 handleCallTrigger(result.triggerCall);
                 shouldRunDeclineReply = Boolean(result.hasDecline);
+                if (loadCharacterEmotionState(session.contactId)?.enabled) {
+                    evaluateCharacterEmotion(session.id, session.contactId).catch(() => {});
+                }
             }
         } catch (error: any) {
             if (!isCurrentGeneration() || isAbortLikeError(error)) return;
@@ -3846,6 +3880,9 @@ export function ChatRoom({ session, onBack, onDeleted }: ChatRoomProps) {
                         handleCallTrigger(lastSendResult.triggerCall);
                     }
                     shouldRunDeclineReply = Boolean(lastSendResult.hasDecline);
+                }
+                if (loadCharacterEmotionState(session.contactId)?.enabled) {
+                    evaluateCharacterEmotion(session.id, session.contactId).catch(() => {});
                 }
             }
         } catch (error: any) {
@@ -5453,6 +5490,31 @@ export function ChatRoom({ session, onBack, onDeleted }: ChatRoomProps) {
                                 {offlineMode ? "线下生成中" : "对方正在输入"}<span className="chat-typing-dots"><i/><i/><i/></span>
                             </span>
                         )}
+                        {!session.isGroup && emotionBuffs.length > 0 && (
+                            <div className="chat-header-emotion-tags">
+                                {emotionBuffs.slice(0, 4).map(buff => (
+                                    <button
+                                        key={buff.id}
+                                        type="button"
+                                        className="emotion-buff-pill emotion-buff-pill-sm"
+                                        style={buffPillStyle(buff.color || hashColor(buff.label))}
+                                        onClick={(e) => { e.stopPropagation(); setOpenHeaderBuff(prev => (prev?.id === buff.id ? null : buff)); }}
+                                    >
+                                        {buff.emoji ? `${buff.emoji} ` : ""}{buff.label}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                        {openHeaderBuff && (
+                            <div className="chat-header-emotion-popover" onClick={e => e.stopPropagation()}>
+                                <div className="chat-header-emotion-popover-title" style={{ color: openHeaderBuff.color || hashColor(openHeaderBuff.label) }}>
+                                    {openHeaderBuff.emoji ? `${openHeaderBuff.emoji} ` : ""}{openHeaderBuff.label}
+                                </div>
+                                <div className="chat-header-emotion-popover-desc">
+                                    {openHeaderBuff.description || "暂无详情"}
+                                </div>
+                            </div>
+                        )}
                     </span>
                     <span className="page-header-right">
                         <button className="page-back-btn" type="button" onClick={() => setShowSettings(true)} aria-label="更多">
@@ -6267,6 +6329,7 @@ export function ChatRoom({ session, onBack, onDeleted }: ChatRoomProps) {
 	                onToggleTheaterMode={toggleTheaterMode}
 	                onCloseTheaterMode={closeTheaterMode}
 	                onOpenRichModal={(modal) => { setShowPlusMenu(false); setRichModal(modal); }}
+                onOpenScheduleEmotion={() => { setShowPlusMenu(false); setShowScheduleEmotionModal(true); }}
                 onOpenCustomPlusAction={handleOpenCustomPlusAction}
                 onStartVideoCall={() => { cancelFollowUp(session.id); setShowPlusMenu(false); setCallInitiator("user"); setShowVideoCall(true); }}
                 onStartVoiceCall={() => { cancelFollowUp(session.id); setShowPlusMenu(false); setCallInitiator("user"); setShowVoiceCall(true); }}
@@ -6399,6 +6462,13 @@ export function ChatRoom({ session, onBack, onDeleted }: ChatRoomProps) {
             )}
 
             {/* Rich Media Input Modals */}
+            {showScheduleEmotionModal && (
+                <ScheduleEmotionModal
+                    characterId={session.contactId}
+                    characterName={character?.name || "对方"}
+                    onClose={() => setShowScheduleEmotionModal(false)}
+                />
+            )}
             {richModal === "voice_msg" && (
                 <VoiceRecordModal
                     characterId={session.contactId}

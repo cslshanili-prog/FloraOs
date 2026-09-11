@@ -1,5 +1,6 @@
 // components/chat/state-values-panel.tsx
 
+import type { CSSProperties } from "react";
 import type { StateValue } from "@/lib/chat-storage";
 
 // Muted, warm palette to match the sticky-note / journal aesthetic
@@ -14,7 +15,7 @@ const KNOWN_COLORS: Record<string, string> = {
     "安全感": "var(--c-icon-teal)",
 };
 
-function hashColor(name: string): string {
+export function hashColor(name: string): string {
     let hash = 0;
     for (let i = 0; i < name.length; i++) {
         hash = name.charCodeAt(i) + ((hash << 5) - hash);
@@ -25,6 +26,15 @@ function hashColor(name: string): string {
 
 function getColor(name: string): string {
     return KNOWN_COLORS[name] || hashColor(name);
+}
+
+// 情绪 buff 用的彩色描边+浅底样式；color-mix 对 hex/hsl 通用，不用再手拼 alpha 后缀
+export function buffPillStyle(color: string): CSSProperties {
+    return {
+        color,
+        borderColor: `color-mix(in srgb, ${color} 45%, transparent)`,
+        background: `color-mix(in srgb, ${color} 12%, transparent)`,
+    };
 }
 
 type Props = {

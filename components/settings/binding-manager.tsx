@@ -30,6 +30,8 @@ import type { InstalledCustomApp } from "@/lib/custom-app-types";
 const APP_ICON_MAP: Partial<Record<ContentAppId, IconId>> = {
     adventure: "mapmode",
     vn: "vnmode",
+    // 情绪跟日程共用一个入口，绑定列表里借日历的图标
+    emotion: "calendar",
 };
 const appIconId = (appId: ContentAppId): IconId => APP_ICON_MAP[appId] ?? appId as IconId;
 import type {
