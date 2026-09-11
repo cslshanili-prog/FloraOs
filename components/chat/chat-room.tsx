@@ -6466,6 +6466,7 @@ export function ChatRoom({ session, onBack, onDeleted }: ChatRoomProps) {
                 <ScheduleEmotionModal
                     characterId={session.contactId}
                     characterName={character?.name || "对方"}
+                    characterAvatar={character?.avatar}
                     onClose={() => setShowScheduleEmotionModal(false)}
                 />
             )}

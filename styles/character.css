@@ -737,6 +737,12 @@ button.emotion-buff-pill:active {
   background: color-mix(in srgb, var(--c-icon-active) 5%, transparent);
 }
 
+/* 日程区自带横幅已经够有分量，外层底色收掉，别跟横幅抢视觉 */
+.schedule-emotion-section--schedule {
+  background: transparent;
+  padding: 0 2px;
+}
+
 .schedule-emotion-section-head {
   display: flex;
   align-items: center;
@@ -750,22 +756,109 @@ button.emotion-buff-pill:active {
   width: auto !important;
 }
 
+/* ── 日程横幅：把角色头像当封面，叠时钟+日期，视觉上跟纯文字列表拉开层次 ── */
+.schedule-emotion-banner {
+  position: relative;
+  height: 104px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--c-icon-active) 55%, #1a1a2e), #1a1a2e);
+}
+
+.schedule-emotion-banner-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  transform: scale(1.15);
+  filter: saturate(1.05);
+}
+
+.schedule-emotion-banner-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.6) 100%);
+}
+
+.schedule-emotion-banner-content {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 9px 11px;
+  color: #fff;
+}
+
+.schedule-emotion-banner-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.schedule-emotion-banner-label {
+  font-size: calc(9.5px*var(--app-text-scale,1));
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.75;
+  font-weight: 700;
+}
+
+.schedule-emotion-banner-btn {
+  font-family: inherit;
+  font-size: calc(10.8px*var(--app-text-scale,1));
+  font-weight: 700;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 999px;
+  padding: 4px 10px;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.schedule-emotion-banner-btn:active {
+  transform: scale(0.94);
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.schedule-emotion-banner-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.schedule-emotion-banner-bottom {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.schedule-emotion-banner-clock {
+  font-family: ui-monospace, "SF Mono", "Cascadia Code", monospace;
+  font-size: calc(24px*var(--app-text-scale,1));
+  font-weight: 700;
+  line-height: 1;
+}
+
+.schedule-emotion-banner-date {
+  font-size: calc(11px*var(--app-text-scale,1));
+  opacity: 0.85;
+}
+
+/* ── 时间轴：左侧时间 + 中间轴线圆点 + 右侧内容，取代纯文字列表 ── */
 .schedule-emotion-timeline {
   display: flex;
   flex-direction: column;
-  gap: 6px;
 }
 
 .schedule-emotion-timeline-row {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  padding: 6px 0;
-  border-bottom: 1px dashed var(--c-panel-border);
-}
-
-.schedule-emotion-timeline-row:last-child {
-  border-bottom: none;
+  display: grid;
+  grid-template-columns: 44px 18px 1fr;
+  column-gap: 8px;
+  padding: 7px 0;
 }
 
 .schedule-emotion-timeline-row.is-now {
@@ -781,17 +874,109 @@ button.emotion-buff-pill:active {
   flex-shrink: 0;
   font-family: ui-monospace, "SF Mono", "Cascadia Code", monospace;
   font-size: calc(12px*var(--app-text-scale,1));
-  min-width: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.schedule-emotion-now-badge {
+  align-self: flex-start;
+  font-family: inherit;
+  font-size: calc(8.5px*var(--app-text-scale,1));
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: #fff;
+  background: var(--c-icon-active);
+  border-radius: 4px;
+  padding: 1px 4px;
+  animation: scheduleNowPulse 1.6s ease-in-out infinite;
+}
+
+.schedule-emotion-timeline-rail {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+.schedule-emotion-timeline-rail::before,
+.schedule-emotion-timeline-rail::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  width: 2px;
+  background: var(--c-panel-border);
+  transform: translateX(-50%);
+}
+
+.schedule-emotion-timeline-rail::before {
+  top: 0;
+  height: calc(50% - 5px);
+}
+
+.schedule-emotion-timeline-rail::after {
+  bottom: 0;
+  top: calc(50% + 5px);
+}
+
+.schedule-emotion-timeline-row:first-child .schedule-emotion-timeline-rail::before {
+  display: none;
+}
+
+.schedule-emotion-timeline-row:last-child .schedule-emotion-timeline-rail::after {
+  display: none;
+}
+
+.schedule-emotion-timeline-dot {
+  position: relative;
+  z-index: 1;
+  align-self: center;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--c-card, #fff);
+  border: 2px solid var(--c-panel-border);
+}
+
+.schedule-emotion-timeline-row.is-now .schedule-emotion-timeline-dot {
+  background: var(--c-icon-active);
+  border-color: var(--c-icon-active);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--c-icon-active) 25%, transparent);
+  animation: scheduleDotPulse 1.6s ease-in-out infinite;
+}
+
+.schedule-emotion-timeline-row.is-past .schedule-emotion-timeline-dot {
+  background: var(--c-icon-active);
+  border-color: var(--c-icon-active);
+  opacity: 0.45;
 }
 
 .schedule-emotion-timeline-body {
   font-size: calc(13px*var(--app-text-scale,1));
   color: var(--c-text);
+  padding-top: 1px;
 }
 
 .schedule-emotion-timeline-location {
   color: var(--c-icon);
 }
+
+@keyframes scheduleDotPulse {
+  0%, 100% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--c-icon-active) 25%, transparent); }
+  50% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--c-icon-active) 12%, transparent); }
+}
+
+@keyframes scheduleNowPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .schedule-emotion-timeline-row.is-now .schedule-emotion-timeline-dot,
+  .schedule-emotion-now-badge {
+    animation: none;
+  }
+}
+
 
 .schedule-emotion-buffs {
   display: flex;
