@@ -12,7 +12,7 @@ import {
     getEmotionVisibility,
     setEmotionVisibility,
 } from "@/lib/emotion-storage";
-import type { CharacterEmotionState, EmotionNarrativeKey, EmotionVisibility } from "@/lib/emotion-types";
+import type { CharacterEmotionState, EmotionNarrativeKey, EmotionStateValueKey, EmotionVisibility } from "@/lib/emotion-types";
 import { EMOTION_STATE_VALUE_KEYS, EMOTION_NARRATIVE_LABELS } from "@/lib/emotion-types";
 import { isScheduleUiEnabled, setScheduleUiEnabled } from "@/lib/schedule-ui-storage";
 import { loadBindingConfig, resolveBinding } from "@/lib/settings-storage";
@@ -31,6 +31,16 @@ const NARRATIVE_ICONS: Record<EmotionNarrativeKey, string> = {
     snark: "🚩",
     withdrawnDraft: "📝",
     nextAction: "✅",
+};
+
+// 状态栏六项数值内部仍以简体存 key（跟 LLM JSON 契约、kv 存储绑定），仅在这里做繁体显示映射
+const STATE_VALUE_DISPLAY_LABELS: Record<EmotionStateValueKey, string> = {
+    偏爱度: "偏愛度",
+    护短指数: "護短指數",
+    操心覆载: "操心覆載",
+    好感度: "好感度",
+    占有欲: "佔有慾",
+    焦虑值: "焦慮值",
 };
 
 export function ScheduleEmotionModal({ characterId, characterName, characterAvatar, onClose }: ScheduleEmotionModalProps) {
@@ -147,7 +157,7 @@ export function ScheduleEmotionModal({ characterId, characterName, characterAvat
     return (
         <div className="modal-overlay" onClick={onClose}>
             <div onClick={e => e.stopPropagation()} className="modal-dialog schedule-emotion-modal">
-                <div className="ts-16 font-semibold text-center text-[var(--c-text)]">{characterName}的日程/情绪</div>
+                <div className="ts-16 font-semibold text-center text-[var(--c-text)]">{characterName}的日程/情緒</div>
 
                 <div className="schedule-emotion-section">
                     <div className="schedule-emotion-section-head">
@@ -214,27 +224,27 @@ export function ScheduleEmotionModal({ characterId, characterName, characterAvat
                                     </div>
                                 ) : (
                                     <div className="ts-12 schedule-emotion-empty text-center py-3">
-                                        {hasWeekPlan ? "今天没有安排" : "本周还没有日程，点一下上面生成"}
+                                        {hasWeekPlan ? "今天沒有安排" : "本週還沒有日程，點一下上面生成"}
                                     </div>
                                 )}
                             </div>
                         </div>
                     ) : (
                         <div className="ts-12 text-[var(--c-icon)] text-center py-3">
-                            日程功能已关闭
+                            日程功能已關閉
                         </div>
                     )}
                 </div>
 
                 <div className="schedule-emotion-section">
                     <div className="schedule-emotion-section-head" style={{ position: "relative" }}>
-                        <span className="ts-13 font-semibold text-[var(--c-text)]">情绪/心声</span>
+                        <span className="ts-13 font-semibold text-[var(--c-text)]">情緒/心聲</span>
                         <div className="flex items-center gap-2">
                             <button
                                 type="button"
                                 className="schedule-emotion-gear-btn"
                                 onClick={(e) => { e.stopPropagation(); setShowVisibilitySettings(v => !v); }}
-                                aria-label="显示设置"
+                                aria-label="顯示設定"
                             >
                                 ⚙️
                             </button>
@@ -243,14 +253,14 @@ export function ScheduleEmotionModal({ characterId, characterName, characterAvat
 
                         {showVisibilitySettings && (
                             <div className="schedule-emotion-visibility-panel" onClick={e => e.stopPropagation()}>
-                                <div className="schedule-emotion-visibility-group-title">状态栏显示</div>
+                                <div className="schedule-emotion-visibility-group-title">狀態欄顯示</div>
                                 {EMOTION_STATE_VALUE_KEYS.map(key => (
                                     <div key={key} className="schedule-emotion-visibility-row">
-                                        <span>{key}</span>
+                                        <span>{STATE_VALUE_DISPLAY_LABELS[key]}</span>
                                         <Toggle checked={visibility.stateValues[key]} onChange={() => handleToggleStateValueVisibility(key)} />
                                     </div>
                                 ))}
-                                <div className="schedule-emotion-visibility-group-title">心声内容显示</div>
+                                <div className="schedule-emotion-visibility-group-title">心聲內容顯示</div>
                                 {(Object.keys(EMOTION_NARRATIVE_LABELS) as EmotionNarrativeKey[]).map(key => (
                                     <div key={key} className="schedule-emotion-visibility-row">
                                         <span>{EMOTION_NARRATIVE_LABELS[key]}</span>
@@ -263,7 +273,7 @@ export function ScheduleEmotionModal({ characterId, characterName, characterAvat
 
                     {enabled && !emotionBound && (
                         <div className="ts-12 text-[var(--c-icon)]">
-                            还没有绑定情绪 API，去「设置 → 配置绑定 → 情绪」里配一个吧。
+                            還沒有綁定情緒 API，去「設定 → 配置綁定 → 情緒」裡配一個吧。
                         </div>
                     )}
 
@@ -276,7 +286,7 @@ export function ScheduleEmotionModal({ characterId, characterName, characterAvat
                                             const color = getStateColor(key);
                                             return (
                                                 <div key={key} className="schedule-emotion-statebar-row">
-                                                    <span className="schedule-emotion-statebar-label">{key}</span>
+                                                    <span className="schedule-emotion-statebar-label">{STATE_VALUE_DISPLAY_LABELS[key]}</span>
                                                     <div className="state-bar-track">
                                                         <div
                                                             className="state-bar-fill"
@@ -311,7 +321,7 @@ export function ScheduleEmotionModal({ characterId, characterName, characterAvat
 
                                 {emotionState?.coreThought && (
                                     <div className="schedule-emotion-block">
-                                        <div className="schedule-emotion-block-title">💭 核心心声</div>
+                                        <div className="schedule-emotion-block-title">💭 核心心聲</div>
                                         <div className="schedule-emotion-block-body">{emotionState.coreThought}</div>
                                     </div>
                                 )}
@@ -333,13 +343,13 @@ export function ScheduleEmotionModal({ characterId, characterName, characterAvat
                             </div>
                         ) : (
                             <div className="ts-12 text-[var(--c-icon)] text-center py-3">
-                                暂无情绪/心声内容，发几条消息后会自动生成
+                                暫無情緒/心聲內容，發幾則訊息後會自動生成
                             </div>
                         )
                     )}
                 </div>
 
-                <button onClick={onClose} className="ui-btn ui-btn-ghost ui-btn-bordered-ghost w-full">关闭</button>
+                <button onClick={onClose} className="ui-btn ui-btn-ghost ui-btn-bordered-ghost w-full">關閉</button>
             </div>
         </div>
     );

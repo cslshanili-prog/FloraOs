@@ -42,10 +42,10 @@ export const EMOTION_STATE_VALUE_HINTS: Record<EmotionStateValueKey, string> = {
 export type EmotionNarrativeKey = "darkSide" | "snark" | "withdrawnDraft" | "nextAction";
 
 export const EMOTION_NARRATIVE_LABELS: Record<EmotionNarrativeKey, string> = {
-  darkSide: "阴暗面",
-  snark: "毒蛇吐槽 & 排雷纪录",
-  withdrawnDraft: "撤回的心声",
-  nextAction: "待办行动",
+  darkSide: "陰暗面",
+  snark: "毒蛇吐槽 & 排雷紀錄",
+  withdrawnDraft: "撤回的心聲",
+  nextAction: "待辦行動",
 };
 
 export type EmotionVisibility = {
