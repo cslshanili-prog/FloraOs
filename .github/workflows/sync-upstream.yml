@@ -1,5 +1,9 @@
 name: Sync upstream (create PR)
 
+permissions:
+  contents: write
+  pull-requests: write
+
 on:
   schedule:
     - cron: '0 3 * * *' # UTC 每天 03:00 執行（可改）
